@@ -4,6 +4,7 @@ using Orchard.Hosting.Descriptor.Models;
 using System.Linq;
 using Orchard.Configuration.Environment;
 using Microsoft.Framework.Logging;
+using System.Diagnostics;
 
 namespace Orchard.Hosting.ShellBuilders {
     /// <summary>
@@ -39,18 +40,23 @@ namespace Orchard.Hosting.ShellBuilders {
 
         ShellContext IShellContextFactory.CreateShellContext(
             ShellSettings settings) {
+            var sw = Stopwatch.StartNew();
             _logger.LogInformation("Creating shell context for tenant {0}", settings.Name);
 
             var blueprint = _compositionStrategy.Compose(settings, MinimumShellDescriptor());
             var provider = _shellContainerFactory.CreateContainer(settings, blueprint);
 
             try {
-                return new ShellContext {
+                var shellcontext = new ShellContext {
                     Settings = settings,
                     Blueprint = blueprint,
                     LifetimeScope = provider,
                     Shell = provider.GetRequiredService<IOrchardShell>()
                 };
+
+                _logger.LogVerbose("Created shell context for tenant {0} in {1}ms", settings.Name, sw.ElapsedMilliseconds);
+
+                return shellcontext;
             }
             catch (Exception ex) {
                 _logger.LogError("Cannot create shell context", ex);
@@ -65,9 +71,10 @@ namespace Orchard.Hosting.ShellBuilders {
                     new ShellFeature { Name = "Orchard.Logging.Console" },
                     new ShellFeature { Name = "Orchard.Hosting" },
                     new ShellFeature { Name = "Settings" },
-                    new ShellFeature { Name = "Orchard.Test1" },
                     new ShellFeature { Name = "Orchard.Demo" },
-                    new ShellFeature { Name = "Orchard.Data.EntityFramework" }
+                    new ShellFeature { Name = "Orchard.Data.EntityFramework" },
+                    new ShellFeature { Name = "Orchard.Data.EntityFramework.InMemory" },
+                    new ShellFeature { Name = "Orchard.Data.EntityFramework.Indexing" }
                 },
                 Parameters = Enumerable.Empty<ShellParameter>(),
             };

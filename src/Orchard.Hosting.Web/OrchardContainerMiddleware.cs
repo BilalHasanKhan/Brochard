@@ -5,6 +5,7 @@ using Microsoft.AspNet.Http;
 using System;
 using Orchard.Configuration.Environment;
 using Microsoft.Framework.Logging;
+using System.Diagnostics;
 
 namespace Orchard.Hosting {
     public class OrchardContainerMiddleware {
@@ -25,6 +26,7 @@ namespace Orchard.Hosting {
         }
 
         public async Task Invoke(HttpContext httpContext) {
+            var sw = Stopwatch.StartNew();
             var shellSetting = GetSettings(httpContext.Request.Host.Value);
 
             if (shellSetting != null) {
@@ -39,13 +41,14 @@ namespace Orchard.Hosting {
                 _logger.LogError("Tenant not found");
                 throw new Exception("Tenant not found");
             }
+            _logger.LogVerbose("Request took {0}ms", sw.ElapsedMilliseconds);
         }
 
         private ShellSettings GetSettings(string requestHost) {
             var shellSettings = _shellSettingsManager.LoadSettings();
 
             if (!shellSettings.Any()) {
-                return new ShellSettings {Name = ShellSettings.DefaultName, State = TenantState.Uninitialized};
+                return ShellHelper.BuildDefaultUninitializedShell;
             }
 
             return shellSettings
